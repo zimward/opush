@@ -8,7 +8,7 @@ use anyhow::Context;
 use async_signal::{Signal, Signals};
 use futures_util::StreamExt;
 use serde::Deserialize;
-use tracing::warn;
+use tracing::{info, warn};
 use tracing_subscriber::{EnvFilter, fmt::format::FmtSpan};
 use zbus::{Connection, conn::Builder};
 
@@ -65,7 +65,9 @@ async fn main() -> anyhow::Result<()> {
         })
     });
     let config_file = get_config_dir().join("opush.json");
-    let config: Config = serde_json::from_str(&read_to_string(config_file)?)?;
+    let config: Config =
+        serde_json::from_str(&read_to_string(config_file).context("failed to read config file!")?)
+            .context("failed to parse config")?;
 
     //setup sigfd for clean shutdowns
     let mut signals = Signals::new([Signal::Int, Signal::Quit, Signal::Term])
@@ -84,7 +86,9 @@ async fn main() -> anyhow::Result<()> {
 
     loop {
         tokio::select! {
+            biased;
             _ = signals.next() =>{
+                info!("exit signal received. shutting down...");
                 break;
             }
             r=client.poll(&mut receive)=>{

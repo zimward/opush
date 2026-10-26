@@ -121,7 +121,7 @@ impl PingState {
                     Ok(None)
                 } else {
                     timeout.await;
-                    trace!("ping timeout!");
+                    warn!("didn't receive server pong!");
                     //timeout didn't get canceled in time. connection needs to be restarted
                     *self = Self::Stop;
                     Err(())
@@ -274,7 +274,6 @@ impl WsCon {
                         }
                         unreachable!("This variant can't be returned by the FSM in this branch!");
                     }
-                    error!("Ping Timed out!");
                     //Timout!
                     self.disconnect().await;
                     return Err(ConError::Network);
@@ -353,15 +352,13 @@ impl WsCon {
         self.ping_fsm.is_started()
     }
 
-    pub async fn close(self) -> Url {
-        if let Some(mut sink) = self.sink {
-            let _ = sink.close().await;
-        }
+    pub async fn close(mut self) -> Url {
+        self.disconnect().await;
         self.url
     }
     async fn disconnect(&mut self) {
         if let Some(sink) = &mut self.sink {
-            warn!("closing connection!");
+            trace!("closing connection!");
             let _ = sink.close().await;
         }
         self.sink = None;

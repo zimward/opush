@@ -110,7 +110,7 @@ impl Client {
         } else {
             (None, HashMap::new())
         };
-
+        info!("using autopush server at {url}");
         Self {
             ws: WsCon::new(url),
             con,
@@ -130,11 +130,11 @@ impl Client {
             Ok(()) => Ok(()),
             //no further reconnect attempts
             Err(ConError::NetworkCritical) => {
-                error!("Critical network error!. Exiting...");
+                error!("Critical network error! Exiting...");
                 Err(())
             }
             Err(_) => {
-                error!("Reconnect failed, retrying in 5s...");
+                error!("Connect failed, retrying in 5s...");
                 let delay = tokio::time::sleep(Duration::from_secs(5));
                 tokio::pin!(delay);
                 //keep serviceing dbus while waiting for the backoff delay
@@ -229,6 +229,8 @@ impl Client {
                             for reg in self.registrations.values_mut() {
                                 reg.channel_url = None;
                             }
+                        } else {
+                            info!("connected with UAID {}", uaid);
                         }
                         self.uaid = Some(uaid);
                         for (uuid, reg) in &mut self.registrations {
@@ -340,6 +342,7 @@ impl Client {
             }
             // save the channel url even if we couldn't deliver it so that its cached
             reg.channel_url = Some(push_endpoint);
+            info!("registered {}", reg.path);
         } else {
             //this might happen after a connection loss during registrations
             warn!(
@@ -370,7 +373,7 @@ impl Client {
     }
     async fn handle_notif(&mut self, notification: Notification) -> Result<(Uuid, String), String> {
         if let Some(reg) = self.registrations.get_mut(&notification.channel_id) {
-            info!(
+            trace!(
                 "sending message to client {}, from channel {}",
                 reg.path, notification.channel_id
             );
@@ -516,6 +519,8 @@ impl Client {
                     reg.path
                 );
                 self.registrations.remove(&uuid);
+            } else {
+                info!("unregistering {}", reg.path);
             }
         } else {
             warn!("Unregister called for unknown token {}", token);
