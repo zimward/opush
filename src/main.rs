@@ -8,7 +8,7 @@ use anyhow::Context;
 use async_signal::{Signal, Signals};
 use futures_util::StreamExt;
 use serde::Deserialize;
-use tracing::{info, warn};
+use tracing::{info, level_filters::LevelFilter, warn};
 use tracing_subscriber::{EnvFilter, fmt::format::FmtSpan};
 use zbus::{Connection, conn::Builder};
 
@@ -52,7 +52,11 @@ async fn main() -> anyhow::Result<()> {
     let subscriber = tracing_subscriber::fmt()
         .with_ansi_sanitization(true)
         .with_level(true)
-        .with_env_filter(EnvFilter::from_default_env())
+        .with_env_filter(
+            EnvFilter::builder()
+                .with_default_directive(LevelFilter::INFO.into())
+                .from_env_lossy(),
+        )
         .with_span_events(FmtSpan::NONE)
         .with_line_number(true)
         .finish();

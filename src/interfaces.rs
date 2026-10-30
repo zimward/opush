@@ -47,14 +47,11 @@ pub struct CAUnregistered<'a> {
     assume_defaults = true
 )]
 pub trait Connector2 {
-    // Message method
     fn message(&self, args: CAMessage<'_>) -> zbus::Result<CRMessage>;
 
-    // NewEndpoint method
     #[zbus(no_reply)]
     fn new_endpoint(&self, args: CAEndpoint<'_>) -> zbus::Result<()>;
 
-    // Unregistered method
     #[zbus(no_reply)]
     fn unregistered(&self, args: CAUnregistered<'_>) -> zbus::Result<()>;
 }

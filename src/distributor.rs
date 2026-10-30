@@ -19,7 +19,6 @@ impl Distributor {
 
 #[interface(name = "org.unifiedpush.Distributor2")]
 impl Distributor {
-    #[allow(clippy::unused_self)]
     async fn register(&self, args: DARegister) -> DRRegister<'_> {
         trace!(
             "called register from {} with token {}",
