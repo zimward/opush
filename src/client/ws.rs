@@ -12,6 +12,7 @@ use crate::client::{
     Url,
     protocol::{ClientMessage, ServerMessage},
 };
+use tokio_tungstenite::tungstenite::Error as TE;
 
 type WsSink = SplitSink<WebSocketStream<MaybeTlsStream<TcpStream>>, Message>;
 type WsSource = SplitStream<WebSocketStream<MaybeTlsStream<TcpStream>>>;
@@ -31,25 +32,23 @@ impl From<tokio_tungstenite::tungstenite::Error> for ConError {
     fn from(value: tokio_tungstenite::tungstenite::Error) -> Self {
         trace!("tungstenite error: {:#?}", value);
         match value {
-            tokio_tungstenite::tungstenite::Error::ConnectionClosed
-            | tokio_tungstenite::tungstenite::Error::AlreadyClosed => Self::Network,
-            tokio_tungstenite::tungstenite::Error::Io(_error) => Self::Network,
-            tokio_tungstenite::tungstenite::Error::Tls(_tls_error) => Self::NetworkCritical,
-            tokio_tungstenite::tungstenite::Error::Capacity(_capacity_error) => Self::Protocol,
+            TE::ConnectionClosed | TE::AlreadyClosed => Self::Network,
+            TE::Io(_error) => Self::Network,
+            TE::Tls(_tls_error) => Self::NetworkCritical,
+            TE::Capacity(_capacity_error) => Self::Protocol,
             //treat http protocol errors as critical connection closing errors
-            tokio_tungstenite::tungstenite::Error::Protocol(_protocol_error) => Self::Network,
-            tokio_tungstenite::tungstenite::Error::WriteBufferFull(_message) => Self::Protocol,
-            tokio_tungstenite::tungstenite::Error::Utf8(_)
-            | tokio_tungstenite::tungstenite::Error::AttackAttempt => Self::Protocol,
-            tokio_tungstenite::tungstenite::Error::Url(_url_error) => Self::Protocol,
-            tokio_tungstenite::tungstenite::Error::Http(response) => {
+            TE::Protocol(_protocol_error) => Self::Network,
+            TE::WriteBufferFull(_message) => Self::Protocol,
+            TE::Utf8(_) | TE::AttackAttempt => Self::Protocol,
+            TE::Url(_url_error) => Self::Protocol,
+            TE::Http(response) => {
                 if response.status() == 401 {
                     Self::Permission
                 } else {
                     Self::Network
                 }
             }
-            tokio_tungstenite::tungstenite::Error::HttpFormat(_error) => Self::Protocol,
+            TE::HttpFormat(_error) => Self::Protocol,
         }
     }
 }
